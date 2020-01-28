@@ -12,9 +12,6 @@ RUN set -ex; \
     sed -i 's/if \[ "`id -u`" -eq "0" \]/if fasle \&\& [ "`id -u`" -eq "0" ]/' /usr/bin/greenbone-nvt-sync; \
     rm -rf /var/lib/apt/lists/*
 
-VOLUME /var/lib/openvas \
-       /var/run/redis
-
 COPY docker-entrypoint.sh /usr/local/bin/
 ENTRYPOINT ["docker-entrypoint.sh"]
 

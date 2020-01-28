@@ -1,46 +1,80 @@
-gvmd:
-  image: admirito/gvmd:11
-  links:
-    - gvm-postgres
-  environment:
-    GVMD_POSTGRESQL_URI: 'postgresql://gvmduser:mypassword@gvm-postgres:5432/gvmd?application_name=gvmd'
-  volumes_from:
-    - openvas
+version: '3'
 
-gvm-postgres:
-  image: admirito/gvm-postgres:11
-  environment:
-    POSTGRES_USER: 'gvmduser'
-    POSTGRES_PASSWORD: 'mypassword'
-    POSTGRES_DB: 'gvmd'
+services:
 
-openvas:
-  image: admirito/openvas:11
-  volumes:
-    - /var/run
+  gvmd:
+    image: admirito/gvmd:11
+    links:
+      - postgres
+    environment:
+      GVMD_POSTGRESQL_URI: 'postgresql://gvmduser:mypassword@postgres:5432/gvmd?application_name=gvmd'
+    volumes:
+      - var-run:/var/run
+      - cert-data:/var/lib/gvm/cert-data
+      - scap-data:/var/lib/gvm/scap-data
+      - plugins:/var/lib/openvas/plugins
 
-redis:
-  image: redis:5.0
-  command: redis-server --port 0 --unixsocket /var/run/redis/redis.sock --unixsocketperm 755
-  volumes_from:
-    - openvas
+  postgres:
+    image: admirito/gvm-postgres:11
+    environment:
+      POSTGRES_USER: 'gvmduser'
+      POSTGRES_PASSWORD: 'mypassword'
+      POSTGRES_DB: 'gvmd'
+      PGDATA: '/var/lib/postgresql/data/pgdata'
+    volumes:
+      - pgdata:/var/lib/postgresql/data/pgdata
 
-gsad:
-  image: admirito/gsad:11
-  links:
-    - gvmd
-  environment:
-    GVMD_HOST: 'gvmd'
-    GVMD_PORT: '9390'
+  openvas:
+    image: admirito/openvas:11
+    build: openvas
+    # entrypoint:
+    #   - ospd-openvas
+    # command:
+    #   - -l/dev/stdout
+    #   - -f
+    volumes:
+      - var-run:/var/run
+      - plugins:/var/lib/openvas/plugins
 
-# cert-scap-sync:
-#   image: admirito/gvmd:11
-#   command: sh -c "greenbone-certdata-sync; sleep 3; greenbone-scapdata-sync"
-#   volumes_from:
-#     - gvmd
+  redis:
+    image: redis:5.0
+    # skip given entrypoint to run as root so socket works
+    entrypoint: redis-server
+    command: --port 0 --unixsocket /var/run/redis/redis.sock --unixsocketperm 755
+    user: root
+    volumes:
+      - var-run:/var/run
 
-# nvt-sync:
-#   image: admirito/openvas:11
-#   command: greenbone-nvt-sync
-#   volumes_from:
-#     - openvas
+  gsad:
+    image: admirito/gsad:11
+    links:
+      - gvmd
+    environment:
+      GVMD_HOST: 'gvmd'
+      GVMD_PORT: '9390'
+    ports:
+      - 3000:80
+
+#  cert-scap-sync:
+#    image: admirito/gvmd:11
+#    command: sh -c "greenbone-certdata-sync; sleep 3; greenbone-scapdata-sync"
+#    volumes:
+#      - var-run:/var/run
+#      - cert-data:/var/lib/gvm/cert-data
+#      - scap-data:/var/lib/gvm/scap-data
+#      - plugins:/var/lib/openvas/plugins
+#
+#  nvt-sync:
+#    image: admirito/openvas:11
+#    command: greenbone-nvt-sync
+#    volumes:
+#      - var-run:/var/run
+#      - plugins:/var/lib/openvas/plugins
+
+volumes:
+  var-run:
+  scap-data:
+  cert-data:
+  plugins:
+  pgdata:
+
