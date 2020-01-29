@@ -56,22 +56,6 @@ services:
     ports:
       - 3000:80
 
-  cert-scap-sync:
-    image: admirito/gvmd:11
-    command: sh -c "greenbone-certdata-sync; sleep 3; greenbone-scapdata-sync"
-    volumes:
-      - var-run:/var/run
-      - cert-data:/var/lib/gvm/cert-data
-      - scap-data:/var/lib/gvm/scap-data
-      - plugins:/var/lib/openvas/plugins
-
-  nvt-sync:
-    image: admirito/openvas:11
-    command: greenbone-nvt-sync
-    volumes:
-      - var-run:/var/run
-      - plugins:/var/lib/openvas/plugins
-
 volumes:
   var-run:
   scap-data:
